@@ -1,37 +1,26 @@
-// src/App.jsx
-import React, { useState } from "react"; // ✅ Add React here
-import { getStockPrice } from "./api";
+import React, { useState, useEffect } from "react";
+import { ThemeProvider, CssBaseline } from "@mui/material";
+import { getTheme } from "./theme";
+import Navbar from "./components/Navbar";
+import Dashboard from "./components/Dashboard";
+import Portfolio from "./components/Portfolio";
+import Profile from "./components/Profile";
 
-function App() {
-  const [ticker, setTicker] = useState("AAPL");
-  const [price, setPrice] = useState(null);
-  const [error, setError] = useState("");
+export default function App() {
+  const [page, setPage] = useState("dashboard");
+  const [darkMode, setDarkMode] = useState(JSON.parse(localStorage.getItem("darkMode")) ?? true);
 
-  const handleGetPrice = async () => {
-    const data = await getStockPrice(ticker.toUpperCase());
-    if (data) {
-      setPrice(data.c); // 'c' is current price from Finnhub
-      setError("");
-    } else {
-      setError("Stock not found or backend error");
-      setPrice(null);
-    }
-  };
+  useEffect(() => {
+    localStorage.setItem("darkMode", JSON.stringify(darkMode));
+  }, [darkMode]);
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>📈 Stock Tracker</h1>
-      <input
-        type="text"
-        value={ticker}
-        onChange={(e) => setTicker(e.target.value)}
-        placeholder="Enter ticker (e.g. AAPL)"
-      />
-      <button onClick={handleGetPrice}>Get Price</button>
-      {price !== null && <h2>Current Price: ${price}</h2>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-    </div>
+    <ThemeProvider theme={getTheme(darkMode ? "dark" : "light")}>
+      <CssBaseline />
+      <Navbar page={page} setPage={setPage} />
+      {page === "dashboard" && <Dashboard />}
+      {page === "portfolio" && <Portfolio />}
+      {page === "profile" && <Profile darkMode={darkMode} setDarkMode={setDarkMode} />}
+    </ThemeProvider>
   );
 }
-
-export default App;
