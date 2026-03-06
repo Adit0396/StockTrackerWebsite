@@ -1,14 +1,17 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useStock } from "../context/StockContext";
+import { useSelector } from "react-redux";
+import { selectMarket, selectStocksState, selectQuotes } from "../store";
 import { formatPrice, formatPercent, formatMarketCap, changeColor, changeColorBg } from "../utils/format";
 
 const SECTOR_ORDER = ["Finance", "Technology", "Consumer", "Energy", "Healthcare", "Auto", "Telecom", "Materials", "Utilities", "Retail", "Conglomerate"];
 
 export default function MarketOverview() {
   const navigate = useNavigate();
-  const { marketOverview, getEnrichedStocks } = useStock();
-  const enriched = getEnrichedStocks();
+  const marketOverview = useSelector(selectMarket);
+  const { list: stocks } = useSelector(selectStocksState);
+  const quotes = useSelector(selectQuotes);
+  const enriched = stocks.map(s => ({ ...s, ...(quotes[s.symbol] || {}) }));
 
   // Group by sector
   const bySector = SECTOR_ORDER.map((sec) => ({

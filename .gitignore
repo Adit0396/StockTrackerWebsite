@@ -1,6 +1,16 @@
 # Ignore node modules
 node_modules/
 
+# Ignore Python virtual environment
+server/venv/
+
+# Ignore specific data files
+server/data/nse_universe.json
+
+# Ignore macOS system files
+.DS_Store
+**/.DS_Store
+
 # Ignore env files everywhere
 .env
 .env.*

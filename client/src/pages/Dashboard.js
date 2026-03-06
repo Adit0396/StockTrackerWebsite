@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useStock } from "../context/StockContext";
+import { useSelector } from "react-redux";
+import { selectStocksState, selectMarket, selectQuotes } from "../store";
 import api from "../utils/api";
 import { formatPrice, formatPercent, formatNumber, formatMarketCap, changeColor, changeColorBg } from "../utils/format";
 import { MiniSparkline } from "../components/Charts";
@@ -16,7 +17,9 @@ const SECTORS = ["All", "Finance", "Technology", "Consumer", "Energy", "Healthca
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { marketOverview, getEnrichedStocks, quotesLoading, lastUpdated } = useStock();
+  const { list: stocks, quotesLoading, lastUpdated } = useSelector(selectStocksState);
+  const marketOverview = useSelector(selectMarket);
+  const quotes = useSelector(selectQuotes);
 
   const [strategy, setStrategy]       = useState("momentum");
   const [sector, setSector]           = useState("All");
@@ -24,7 +27,7 @@ export default function Dashboard() {
   const [rankLoading, setRankLoading] = useState(false);
   const [sparklines, setSparklines]   = useState({});
 
-  const enriched = getEnrichedStocks();
+  const enriched = stocks.map(s => ({ ...s, ...(quotes[s.symbol] || {}) }));
 
   // Filter by sector
   const displayed = sector === "All" ? enriched : enriched.filter((s) => s.sector === sector);

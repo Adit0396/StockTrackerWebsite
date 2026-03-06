@@ -2,4 +2,8 @@ fastapi==0.115.0
 uvicorn[standard]==0.30.6
 yfinance==0.2.44
 pandas==2.2.2
+requests==2.32.3
+python-jose[cryptography]==3.3.0
+bcrypt==4.0.1
+python-multipart==0.0.9
 python-dotenv==1.0.1
