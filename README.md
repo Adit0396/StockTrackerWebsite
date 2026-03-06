@@ -1,6 +1,6 @@
-# 📊 StockPulse — Real-time Stock Tracker
+# 📊 StockPulse India — Real-time NSE Stock Tracker
 
-A full-stack, production-grade stock tracking dashboard for **Australia (ASX)**, **New Zealand (NZX)**, **India (NSE/BSE)**, and **USA (NYSE/NASDAQ)**.
+A full-stack, production-grade stock tracking dashboard for **India (NSE)** — built with React, FastAPI, and yfinance.
 
 ---
 
@@ -8,113 +8,87 @@ A full-stack, production-grade stock tracking dashboard for **Australia (ASX)**,
 
 | Feature | Details |
 |---|---|
-| **Live Quotes** | Real-time prices via Yahoo Finance (no API key needed!) |
-| **Historical Charts** | 1W / 1M / 3M / 6M / 1Y / 2Y price charts with volume |
-| **Technical Analysis** | RSI, MACD, SMA20/50/200, Bollinger Bands, ATR, VWAP |
-| **Fundamentals** | P/E, EPS, Revenue, Margins, Debt/Equity, Analyst targets |
-| **Market Heatmap** | Color-coded visual of all stocks by % change |
+| **Live Quotes** | Real-time NSE prices via yfinance (no API key needed) |
+| **NIFTY 50 Dashboard** | All 50 stocks with live prices, heatmap, and ticker tape |
+| **Full NSE Universe** | 2,600+ NSE-listed companies in the screener |
+| **Historical Charts** | 1W / 1M / 3M / 6M / 1Y / 2Y price charts |
+| **Technical Analysis** | RSI, MACD, SMA20/50/200, Bollinger Bands, ATR |
+| **Fundamentals** | P/E, P/B, ROE, ROA, Revenue, Margins, Debt/Equity |
+| **Market Heatmap** | Color-coded visual of all NIFTY 50 stocks by % change |
 | **Strategy Ranking** | Momentum, Value, Volume Surge, Top Gainers/Losers |
-| **News + Sentiment** | 🟢 Green (Bullish) / 🔴 Red (Bearish) / ⚪ Neutral news cards |
-| **Fear & Greed Index** | Sentiment gauge across all tracked stocks |
-| **Stock Screener** | Filter by region, sector, P/E, % change, search |
-| **Market Overview** | Per-region market summaries with index data |
-| **Auto-refresh** | Quotes update every 60 seconds automatically |
-| **Search** | Live search across all stocks + Yahoo Finance search |
+| **News + Sentiment** | 🟢 Bullish / 🔴 Bearish / ⚪ Neutral news cards |
+| **Fear & Greed Index** | Live sentiment gauge across all tracked stocks |
+| **Stock Screener** | Filter 2,600+ stocks by sector, price, P/E with pagination |
+| **Market Overview** | NIFTY 50, Bank NIFTY, SENSEX index data |
+| **User Accounts** | Email/password auth with JWT — watchlist tied to your account |
+| **Watchlist** | Save and track your favourite stocks |
+| **Auto-refresh** | Quotes update every 90 seconds automatically |
+
+---
+
+## 🛠 Tech Stack
+
+| Layer | Tech |
+|---|---|
+| **Frontend** | React 18, Redux Toolkit, React Router 6, Recharts |
+| **Backend** | Python, FastAPI, uvicorn |
+| **Data** | yfinance (free, no API key needed) |
+| **Auth** | JWT tokens + bcrypt password hashing |
+| **Database** | SQLite (users + watchlist) |
+| **Styling** | Inline CSS + Google Fonts (Syne + JetBrains Mono) |
 
 ---
 
 ## 📋 Prerequisites
 
-Make sure you have these installed:
-
 ```bash
-# Check Node.js (need v16+)
+# Python 3.9+
+python3 --version
+
+# Node.js 16+
 node --version
-
-# Check npm
-npm --version
-
-# If not installed, download from https://nodejs.org
 ```
 
 ---
 
-## 🚀 Quick Start (5 Minutes)
+## 🚀 Quick Start
 
-### Step 1 — Download the project
-
-Save the `stockpulse` folder to your computer, e.g. `~/Desktop/stockpulse`
-
-### Step 2 — Open Terminal / Command Prompt
-
-**Windows:** Press `Win + R`, type `cmd`, press Enter  
-**Mac:** Press `Cmd + Space`, type `Terminal`, press Enter  
-**Linux:** Press `Ctrl + Alt + T`
-
-### Step 3 — Navigate to the project folder
+### 1. Clone the repo
 
 ```bash
-cd ~/Desktop/stockpulse
+git clone https://github.com/your-username/stockpulse.git
+cd stockpulse
 ```
 
-### Step 4 — Install dependencies
+### 2. Start the backend
 
 ```bash
-# Install root dependencies (concurrently)
-npm install
-
-# Install server dependencies
 cd server
-npm install
-cd ..
+pip install -r requirements.txt
+python3 -m uvicorn main:app --reload --port 8000
+```
 
-# Install client dependencies
+First startup takes ~30–60 seconds — it fetches all 50 NIFTY stocks and 2,600+ NSE listings from NSE's API. You'll see:
+
+```
+✅ NIFTY 50: 50 stocks
+✅ Universe: 2634 stocks
+🚀 StockPulse API → http://localhost:8000
+```
+
+### 3. Start the frontend
+
+Open a new terminal tab:
+
+```bash
 cd client
 npm install
-cd ..
+npm start
 ```
 
-> ⏱️ This takes 2–3 minutes. You'll see lots of text — that's normal.
+### 4. Open the app
 
-### Step 5 — Configure environment (optional but recommended)
-
-```bash
-# Copy the example .env file
-cd server
-cp .env.example .env
-```
-
-Open `server/.env` in any text editor (Notepad, VS Code, etc.) and optionally add:
-
-```env
-# FREE News API key — get one at https://newsapi.org/register
-NEWS_API_KEY=your_key_here
-
-# Everything else works without any API keys!
-```
-
-> ✅ **Yahoo Finance data works with NO API KEY needed!**
-
-### Step 6 — Start the app
-
-```bash
-# Go back to root folder
-cd ~/Desktop/stockpulse
-
-# Start both server and client together
-npm run dev
-```
-
-You'll see:
-```
-[server] 🚀 StockPulse Server running on http://localhost:5001
-[client] Compiled successfully!
-[client] Local: http://localhost:3000
-```
-
-### Step 7 — Open in browser
-
-👉 Open **http://localhost:3000** in your browser
+👉 **http://localhost:3000**
 
 ---
 
@@ -122,190 +96,172 @@ You'll see:
 
 ```
 stockpulse/
-├── package.json              ← Root (runs both server + client)
+├── .gitignore
+├── render.yaml                  ← Render deployment config (both services)
 │
-├── server/                   ← Node.js + Express backend
-│   ├── index.js              ← Main server file (all API routes)
-│   ├── package.json
-│   └── .env.example          ← Copy to .env and add your keys
+├── server/
+│   ├── main.py                  ← FastAPI app (all routes + auth + yfinance)
+│   ├── requirements.txt
+│   └── data/                    ← Auto-created on first run
+│       ├── stockpulse.db        ← SQLite (gitignored)
+│       └── nse_universe.json    ← NSE universe cache (gitignored)
 │
-└── client/                   ← React frontend
+└── client/
+    ├── package.json
     ├── public/
-    │   └── index.html
-    ├── src/
-    │   ├── App.js             ← Router setup
-    │   ├── App.css            ← Global styles
-    │   ├── context/
-    │   │   └── StockContext.js ← Global state management
-    │   ├── hooks/
-    │   │   └── useStockDetail.js
-    │   ├── utils/
-    │   │   ├── api.js         ← API calls to backend
-    │   │   └── format.js      ← Number/currency formatters
-    │   ├── components/
-    │   │   ├── Header.js      ← Navigation + Search
-    │   │   ├── Charts.js      ← Recharts wrappers
-    │   │   ├── NewsFeed.js    ← News with sentiment colors
-    │   │   └── TechnicalPanel.js ← Technical indicators UI
-    │   └── pages/
-    │       ├── Dashboard.js   ← Main dashboard
-    │       ├── StockDetail.js ← Individual stock view
-    │       ├── Screener.js    ← Stock screener table
-    │       └── MarketOverview.js ← Market by region
-    └── package.json
+    │   ├── index.html
+    │   └── _redirects           ← Render SPA routing fix
+    └── src/
+        ├── index.js             ← React entry point
+        ├── App.js               ← Router + Redux Provider + data loader
+        ├── App.css              ← Global styles + animations
+        ├── store/
+        │   └── index.js         ← Redux store (auth, stocks, watchlist)
+        ├── utils/
+        │   ├── api.js           ← Axios client (auto-injects JWT)
+        │   └── format.js        ← INR formatters, % helpers
+        ├── components/
+        │   ├── Header.js        ← Nav + live search + user menu
+        │   ├── Charts.js        ← Recharts wrappers
+        │   ├── NewsFeed.js      ← News with sentiment badges
+        │   └── TechnicalPanel.js
+        └── pages/
+            ├── Auth.js          ← Login / Register
+            ├── Dashboard.js     ← NIFTY 50 heatmap + strategy ranker
+            ├── StockDetail.js   ← Full stock view (chart, technicals, news)
+            ├── Screener.js      ← 2,600+ stock screener with pagination
+            ├── Watchlist.js     ← User watchlist
+            └── MarketOverview.js
 ```
 
 ---
 
 ## 🔌 API Endpoints
 
-The backend runs on `http://localhost:5001/api/`
+Backend runs on `http://localhost:8000`
 
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/api/stocks` | All tracked stocks (metadata) |
-| GET | `/api/quote/:symbol` | Live quote for one stock |
+| POST | `/api/auth/register` | Register `{ email, password }` |
+| POST | `/api/auth/login` | Login `{ email, password }` |
+| GET | `/api/auth/me` | Current user (requires JWT) |
+| GET | `/api/stocks` | NIFTY 50 metadata |
+| GET | `/api/universe?sector=Finance&page=1` | Full NSE universe (paginated) |
+| GET | `/api/universe/sectors` | All sectors with stock counts |
 | POST | `/api/quotes` | Batch quotes `{ symbols: [...] }` |
+| GET | `/api/quote/:symbol` | Single stock quote |
 | GET | `/api/history/:symbol?period=3mo` | Price history |
-| GET | `/api/technicals/:symbol?period=6mo` | Technical indicators |
 | GET | `/api/summary/:symbol` | Quote + technicals + fundamentals |
-| GET | `/api/news/:symbol` | News articles with sentiment |
-| GET | `/api/market/overview` | Market index data |
-| GET | `/api/search?q=query` | Search stocks |
-| GET | `/api/strategies/rank?strategy=momentum&regions=AU,USA` | Strategy ranking |
-| GET | `/api/health` | Server health check |
+| GET | `/api/news/:symbol` | News with sentiment |
+| GET | `/api/market/overview` | NIFTY 50, Bank NIFTY, SENSEX |
+| GET | `/api/search?q=query` | Search 2,600+ NSE stocks |
+| GET | `/api/strategies/rank?strategy=momentum` | Strategy ranking |
+| GET | `/api/watchlist` | User watchlist (requires JWT) |
+| POST | `/api/watchlist` | Add to watchlist (requires JWT) |
+| DELETE | `/api/watchlist` | Remove from watchlist (requires JWT) |
+| GET | `/api/health` | Health check |
 
-**Test the API directly:**
+**Test the API:**
 ```bash
-# Get a live Apple quote
-curl http://localhost:5001/api/quote/AAPL
-
-# Get ASX 200 leader CBA
-curl http://localhost:5001/api/quote/CBA.AX
-
-# Get NIFTY top stock
-curl http://localhost:5001/api/quote/RELIANCE.NS
-
-# Get top momentum stocks
-curl "http://localhost:5001/api/strategies/rank?strategy=momentum&regions=AU,USA"
+curl http://localhost:8000/api/health
+curl http://localhost:8000/api/universe/sectors
+curl "http://localhost:8000/api/search?q=HDFC"
+curl http://localhost:8000/api/quote/RELIANCE.NS
 ```
 
 ---
 
-## 🔑 API Keys
+## ☁️ Deployment (Render)
 
-### Yahoo Finance (REQUIRED data) — NO KEY NEEDED ✅
-All stock price data comes from Yahoo Finance via the `yahoo-finance2` npm package. No registration required.
+Both services deploy from the same repo using `render.yaml`.
 
-### NewsAPI (OPTIONAL — for real news)
-Without a key, the app shows realistic mock news.
+### 1. Push to GitHub
 
-1. Go to https://newsapi.org/register
-2. Sign up for a **free account** (500 requests/day)
-3. Copy your API key
-4. Add to `server/.env`: `NEWS_API_KEY=your_key_here`
-5. Restart the server
+```bash
+git add .
+git commit -m "initial commit"
+git push origin main
+```
 
-### Symbol Reference
-| Region | Suffix | Example |
-|---|---|---|
-| Australia (ASX) | `.AX` | `CBA.AX`, `BHP.AX` |
-| New Zealand (NZX) | `.NZ` | `FPH.NZ`, `AIR.NZ` |
-| India (NSE) | `.NS` | `TCS.NS`, `INFY.NS` |
-| India (BSE) | `.BO` | `RELIANCE.BO` |
-| USA | (none) | `AAPL`, `MSFT` |
+### 2. Deploy via Render Blueprint
+
+1. Go to [render.com](https://render.com) → **New** → **Blueprint**
+2. Connect your GitHub repo
+3. Render reads `render.yaml` and creates two services:
+   - `stockpulse-api` — FastAPI backend (Python)
+   - `stockpulse-frontend` — React static site
+
+### 3. Add persistent disk (backend)
+
+In Render → `stockpulse-api` → **Disks** → **Add Disk**:
+- Mount path: `/data`
+- Size: 1 GB
+
+> ⚠️ Without this disk, your SQLite database resets on every redeploy.
+
+### 4. Set environment variables
+
+**Backend** (`stockpulse-api`):
+| Variable | Value |
+|---|---|
+| `SECRET_KEY` | Click "Generate" in Render |
+| `ALLOWED_ORIGINS` | `https://stockpulse-frontend.onrender.com` |
+| `DATA_DIR` | `/data` |
+
+**Frontend** (`stockpulse-frontend`):
+| Variable | Value |
+|---|---|
+| `REACT_APP_API_URL` | `https://stockpulse-api.onrender.com` |
+
+### 5. Free tier note
+
+Render's free backend sleeps after 15 min of inactivity (~30s cold start to wake). Use [UptimeRobot](https://uptimerobot.com) (free) to ping `/api/health` every 10 minutes to keep it awake, or upgrade to Starter ($7/mo).
 
 ---
 
 ## 🛠 Troubleshooting
 
+**Backend won't start?**
+```bash
+# Make sure you're in the server folder
+cd server
+python3 -m uvicorn main:app --reload --port 8000
+```
+
+**"Email already registered" on first register?**
+```bash
+# Delete the old database and restart
+rm server/data/stockpulse.db
+```
+
+**Screener shows 404 for /api/universe?**
+Make sure you're running the latest `main.py` — the universe endpoints were added recently.
+
+**yfinance rate limited?**
+Yahoo Finance occasionally rate-limits. The server caches quotes for 90 seconds — wait a moment and refresh.
+
 **Port already in use?**
 ```bash
-# Kill process on port 5001
-npx kill-port 5001
-# Kill process on port 3000
-npx kill-port 3000
-```
-
-**npm install fails?**
-```bash
-# Clear npm cache and retry
-npm cache clean --force
-npm install
-```
-
-**Yahoo Finance errors?**
-- Yahoo Finance occasionally rate-limits. Wait 30 seconds and refresh.
-- Data is cached on the server for 60 seconds for quotes, 5 min for history.
-
-**"Cannot find module" error?**
-```bash
-cd server && npm install
-cd ../client && npm install
-```
-
-**Windows PowerShell execution policy error?**
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+# Find and kill the process on port 8000
+lsof -ti:8000 | xargs kill -9
 ```
 
 ---
 
-## ⚡ Running Server and Client Separately
+## .gitignore
 
-If you prefer two terminal windows:
+Make sure your `.gitignore` includes:
 
-**Terminal 1 — Server:**
-```bash
-cd stockpulse/server
-npm run dev
 ```
-
-**Terminal 2 — Client:**
-```bash
-cd stockpulse/client
-npm start
+server/data/stockpulse.db
+server/data/nse_universe.json
+__pycache__/
+*.pyc
+.env
+node_modules/
+client/build/
+.DS_Store
 ```
-
----
-
-## 🏗 Building for Production
-
-```bash
-# Build optimized React app
-cd client
-npm run build
-
-# The server can then serve the built files
-# Add to server/index.js:
-# app.use(express.static(path.join(__dirname, '../client/build')));
-```
-
----
-
-## 📈 Adding More Stocks
-
-Edit `server/index.js` and add symbols to the `STOCK_UNIVERSE` object:
-
-```js
-AU: [
-  { symbol: "NEW.AX", name: "New Company", sector: "Technology" },
-  // ...existing stocks
-],
-```
-
----
-
-## 🤝 Tech Stack
-
-| Layer | Tech |
-|---|---|
-| **Frontend** | React 18, React Router 6, Recharts |
-| **Backend** | Node.js, Express |
-| **Data** | yahoo-finance2 (free, no key needed) |
-| **News** | NewsAPI.org (free tier) |
-| **Caching** | node-cache (in-memory) |
-| **Styling** | Inline CSS + Google Fonts (Syne + JetBrains Mono) |
 
 ---
 
