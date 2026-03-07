@@ -1,11 +1,9 @@
 """
 StockPulse India — main.py
-FastAPI + yfinance + SQLite auth + JWT
-
-pip install fastapi uvicorn yfinance pandas requests python-jose[cryptography] passlib[bcrypt] python-multipart
+FastAPI + yfinance + PostgreSQL auth + JWT
 """
 
-import os, time, asyncio, requests, json, sqlite3
+import os, time, asyncio, requests, json
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -25,8 +23,8 @@ ALGORITHM     = "HS256"
 TOKEN_EXPIRE  = 60 * 24 * 7  # 7 days in minutes
 DATA_DIR      = Path(__file__).parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
-DB_PATH       = DATA_DIR / "stockpulse.db"
 NSE_UNI_FILE  = DATA_DIR / "nse_universe.json"
+DATABASE_URL  = os.getenv("DATABASE_URL", "")
 
 # ─── App ──────────────────────────────────────────────────────────────────────
 app = FastAPI(title="StockPulse India")
@@ -73,39 +71,63 @@ def optional_user(creds: HTTPAuthorizationCredentials = Depends(bearer)) -> Opti
     except:
         return None
 
-# ─── SQLite DB ────────────────────────────────────────────────────────────────
+# ─── PostgreSQL DB ────────────────────────────────────────────────────────────
+import psycopg2
+import psycopg2.extras
+
 @contextmanager
 def get_db():
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
+    # Render provides DATABASE_URL as postgres:// — psycopg2 needs postgresql://
+    url = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    conn = psycopg2.connect(url)
+    conn.autocommit = False
     try:
         yield conn
         conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 
+def db_fetchone(cursor, query, params=()):
+    cursor.execute(query, params)
+    row = cursor.fetchone()
+    if row is None: return None
+    cols = [d[0] for d in cursor.description]
+    return dict(zip(cols, row))
+
+def db_fetchall(cursor, query, params=()):
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    cols = [d[0] for d in cursor.description]
+    return [dict(zip(cols, r)) for r in rows]
+
 def init_db():
-    with get_db() as db:
-        db.executescript("""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                email      TEXT    UNIQUE NOT NULL,
-                password   TEXT    NOT NULL,
-                created_at TEXT    DEFAULT (datetime('now')),
-                last_login TEXT
-            );
+                id         SERIAL PRIMARY KEY,
+                email      TEXT UNIQUE NOT NULL,
+                password   TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                last_login TIMESTAMP
+            )
+        """)
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS watchlist (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                id         SERIAL PRIMARY KEY,
                 user_id    INTEGER NOT NULL REFERENCES users(id),
-                symbol     TEXT    NOT NULL,
+                symbol     TEXT NOT NULL,
                 name       TEXT,
                 sector     TEXT,
-                added_at   TEXT    DEFAULT (datetime('now')),
+                added_at   TIMESTAMP DEFAULT NOW(),
                 UNIQUE(user_id, symbol)
-            );
-            CREATE INDEX IF NOT EXISTS idx_watchlist_user ON watchlist(user_id);
+            )
         """)
-    print("✅ Database ready:", DB_PATH)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_watchlist_user ON watchlist(user_id)")
+    print("✅ PostgreSQL ready")
 
 init_db()
 
@@ -473,41 +495,40 @@ async def register(req: RegisterReq):
         raise HTTPException(400, "Invalid email address")
     if len(req.password) < 6:
         raise HTTPException(400, "Password must be at least 6 characters")
-    # Check if email exists first — friendly error before attempting insert
-    with get_db() as db:
-        existing = db.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
+    with get_db() as conn:
+        cur = conn.cursor()
+        existing = db_fetchone(cur, "SELECT id FROM users WHERE email=%s", (email,))
         if existing:
             raise HTTPException(400, "Email already registered — please sign in instead")
-    try:
-        with get_db() as db:
-            db.execute(
-                "INSERT INTO users (email, password) VALUES (?,?)",
-                (email, hash_password(req.password))
-            )
-            user = db.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+        try:
+            cur.execute("INSERT INTO users (email, password) VALUES (%s, %s)", (email, hash_password(req.password)))
+            user = db_fetchone(cur, "SELECT * FROM users WHERE email=%s", (email,))
             token = create_token(user["id"], user["email"])
             return {"token": token, "user": {"id": user["id"], "email": user["email"]}}
-    except sqlite3.IntegrityError:
-        raise HTTPException(400, "Email already registered — please sign in instead")
+        except Exception:
+            raise HTTPException(400, "Email already registered — please sign in instead")
 
 @app.post("/api/auth/login")
 async def login(req: LoginReq):
     email = req.email.strip().lower()
-    with get_db() as db:
-        user = db.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+    with get_db() as conn:
+        cur = conn.cursor()
+        user = db_fetchone(cur, "SELECT * FROM users WHERE email=%s", (email,))
     if not user or not verify_password(req.password, user["password"]):
         raise HTTPException(401, "Invalid email or password")
-    with get_db() as db:
-        db.execute("UPDATE users SET last_login=datetime('now') WHERE id=?", (user["id"],))
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET last_login=NOW() WHERE id=%s", (user["id"],))
     token = create_token(user["id"], user["email"])
     return {"token": token, "user": {"id": user["id"], "email": user["email"]}}
 
 @app.get("/api/auth/me")
 async def me(user: dict = Depends(get_current_user)):
-    with get_db() as db:
-        u = db.execute("SELECT id,email,created_at,last_login FROM users WHERE id=?", (user["sub"],)).fetchone()
+    with get_db() as conn:
+        cur = conn.cursor()
+        u = db_fetchone(cur, "SELECT id,email,created_at,last_login FROM users WHERE id=%s", (user["sub"],))
     if not u: raise HTTPException(404, "User not found")
-    return dict(u)
+    return u
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STOCK ROUTES
@@ -722,10 +743,9 @@ async def rank(strategy:str="momentum",limit:int=15):
 
 @app.get("/api/watchlist")
 async def get_watchlist(user:dict=Depends(get_current_user)):
-    with get_db() as db:
-        rows=db.execute("SELECT * FROM watchlist WHERE user_id=? ORDER BY added_at DESC",(user["sub"],)).fetchall()
-    items=[dict(r) for r in rows]
-    # Enrich with cached prices
+    with get_db() as conn:
+        cur = conn.cursor()
+        items = db_fetchall(cur, "SELECT * FROM watchlist WHERE user_id=%s ORDER BY added_at DESC", (user["sub"],))
     for item in items:
         q=cache.get(f"q:{item['symbol']}")
         if q:
@@ -745,9 +765,12 @@ async def add_watchlist(req:WatchReq, user:dict=Depends(get_current_user)):
     sym=req.symbol if req.symbol.endswith(".NS") else req.symbol+".NS"
     meta=SYMBOL_MAP.get(sym) or NSE_UNI_IDX.get(sym) or {}
     try:
-        with get_db() as db:
-            db.execute("INSERT OR IGNORE INTO watchlist (user_id,symbol,name,sector) VALUES (?,?,?,?)",
-                       (user["sub"],sym,req.name or meta.get("name",sym),req.sector or meta.get("sector","Other")))
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO watchlist (user_id,symbol,name,sector) VALUES (%s,%s,%s,%s) ON CONFLICT (user_id,symbol) DO NOTHING",
+                (user["sub"],sym,req.name or meta.get("name",sym),req.sector or meta.get("sector","Other"))
+            )
     except Exception as e: raise HTTPException(400,str(e))
     return await get_watchlist(user)
 
@@ -757,15 +780,16 @@ class WatchRemoveReq(BaseModel):
 @app.delete("/api/watchlist")
 async def remove_watchlist(req:WatchRemoveReq, user:dict=Depends(get_current_user)):
     sym=req.symbol if req.symbol.endswith(".NS") else req.symbol+".NS"
-    with get_db() as db:
-        db.execute("DELETE FROM watchlist WHERE user_id=? AND symbol=?",(user["sub"],sym))
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM watchlist WHERE user_id=%s AND symbol=%s", (user["sub"],sym))
     return await get_watchlist(user)
 
 @app.get("/api/watchlist/quotes")
 async def watchlist_live(user:dict=Depends(get_current_user)):
-    with get_db() as db:
-        rows=db.execute("SELECT * FROM watchlist WHERE user_id=? ORDER BY added_at DESC",(user["sub"],)).fetchall()
-    items=[dict(r) for r in rows]
+    with get_db() as conn:
+        cur = conn.cursor()
+        items = db_fetchall(cur, "SELECT * FROM watchlist WHERE user_id=%s ORDER BY added_at DESC", (user["sub"],))
     if not items: return []
     uncached=[i["symbol"] for i in items if not cache.get(f"q:{i['symbol']}")]
     if uncached:
@@ -783,6 +807,6 @@ async def health():
 
 if __name__=="__main__":
     import uvicorn
-    print(f"\n🚀 StockPulse India → http://localhost:5001")
-    print(f"🇮🇳 {len(STOCKS)} NIFTY 50 | 🔍 {len(NSE_UNIVERSE)} universe | 🔐 SQLite auth\n")
+    print(f"\n🚀 StockPulse India → http://localhost:8000")
+    print(f"🇮🇳 {len(STOCKS)} NIFTY 50 | 🔍 {len(NSE_UNIVERSE)} universe | 🔐 PostgreSQL auth\n")
     uvicorn.run("main:app",host="0.0.0.0",port=5001,reload=True)
